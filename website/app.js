@@ -1,56 +1,27 @@
 const express = require('express');
+const path = require('path');
 const app = express();
-const port = 8000;
-const mysql = require('mysql2/promise');
 
-const creds = require('./creds.json');
-const pool = mysql.createPool(creds);
+// Set up static assets directory
+app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware for parsing form data
+app.use(express.urlencoded({ extended: true }));
+
+// Set the view engine to ejs
 app.set('view engine', 'ejs');
-app.use(express.urlencoded({ extended: true })); // Middleware for parsing form data
 
-app.post('/post', async (req, res) => {
-    const body = req.body;
-    const [rows, fields] = await pool.execute('INSERT INTO members (psid, email, password, first, last, discord) VALUES (?, ?, ?, ?, ?, ?)', [
-        body.psid, body.email, body.password, body.first, body.last, body.discord
-    ]);
-    res.json({"Status": "Success"});
+// Middleware for logging incoming requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toLocaleString()}: ${req.method} ${req.url}, ${req.ip}`);
+  next();
 });
 
-app.get('/', async (req, res) => {
-    const id = req.query.id;
-    let test;
+// Load the main application logic from src/server.js
+const serverRouter = require('./src/server');
+app.use('/', serverRouter);
 
-    if (id) {
-        try {
-            const [rows, fields] = await pool.execute('SELECT * FROM members WHERE id = ?', [
-                id
-            ]);
-
-            console.log(rows);
-
-            if (rows.length > 0) {
-                test = rows.map(row => {
-                    return `
-                        <div>
-                            <p><strong>ID</strong>: ${row.id}</p>
-                            <p><strong>PSID</strong>: ${row.psid}</p>
-                            <p><strong>Email</strong>: ${row.email}</p>
-                            <p><strong>First</strong>: ${row.first}</p>
-                            <p><strong>Last</strong>: ${row.last}</p>
-                            <p><strong>Discord</strong>: ${row.discord}</p>
-                        </div>
-                    `;
-                }).join('');
-            }
-        } catch (err) {
-            return res.status(500).send("Error: " + err.message);
-        }
-    }
-
-    res.render('index', { test });
-});
-
+const port = process.env.PORT || 8000;
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
