@@ -3,7 +3,7 @@ const app = express();
 const port = 8000;
 const mysql = require("mysql2/promise");
 
-const creds = require("./creds.json");
+const creds = require("./config/creds.json");
 const pool = mysql.createPool(creds);
 
 app.set("view engine", "ejs");
